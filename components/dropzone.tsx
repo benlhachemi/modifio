@@ -7,8 +7,10 @@ import { MdClose } from 'react-icons/md';
 import ReactDropzone from 'react-dropzone';
 import bytesToSize from '@/utils/bytes-to-size';
 import fileToIcon from '@/utils/file-to-icon';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useToast } from '@/components/ui/use-toast';
 import compressFileName from '@/utils/compress-file-name';
+import axios from 'axios';
 import {
   Select,
   SelectContent,
@@ -21,70 +23,117 @@ import type { Action } from '@/types';
 
 export default function Dropzone() {
   // variables & hooks
-  const [is_hover, setIsHover] = useState<Boolean>(false)
-  const [files, setFiles] = useState<File[]>([])
-  const [actions, setActions] = useState<Action[]>([])
-  const [ready, setReady] = useState<Boolean>(false)
+  const { toast } = useToast();
+  const [is_hover, setIsHover] = useState<Boolean>(false);
+  const [actions, setActions] = useState<Action[]>([]);
+  const [ready, setIsReady] = useState<Boolean>(false);
+  const [files, setFiles] = useState<Array<any>>([]);
   const accepted_files = {
     'image/*': [],
-    'audio/*': [],
-    'video/*': [],
-  }
+  };
 
   // functions
-  const handleUpload = (data: any): void => {
-    setFiles(data)
-    const tmp: Action[] = []
+  const convert = async (): Promise<any> => {
+    axios({
+      method: 'POST',
+      url: '/api/convert',
+      data: {
+        actions,
+      },
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  };
+  const handleUpload = (data: Array<any>): void => {
+    setFiles(data);
+    const tmp: Action[] = [];
     data.forEach((file: any) => {
+      const formData = new FormData();
       tmp.push({
         file_name: file.name,
         file_size: file.size,
-        from: file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2),
-        to: null
-      })
-    })
-    setActions(tmp)  
+        from: file.name.slice(((file.name.lastIndexOf('.') - 1) >>> 0) + 2),
+        to: null,
+        file_type: file.type,
+        buffer: file,
+      });
+    });
+    setActions(tmp);
   };
-
   const handleHover = (): void => setIsHover(true);
   const handleExitHover = (): void => setIsHover(false);
+  const updateAction = (file_name: String, to: String) => {
+    setActions(
+      actions.map((action): Action => {
+        if (action.file_name === file_name) {
+          console.log('FOUND');
+          return {
+            ...action,
+            to,
+          };
+        }
+
+        return action;
+      }),
+    );
+  };
+  const checkIsReady = (): void => {
+    let tmp_is_ready = true;
+    actions.forEach((action: Action) => {
+      if (!action.to) tmp_is_ready = false;
+    });
+    setIsReady(tmp_is_ready);
+  };
+  const deleteAction = (action: Action): void => {
+    setActions(actions.filter((elt) => elt !== action));
+    setFiles(files.filter((elt) => elt.name !== action.file_name));
+  };
+  useEffect(() => {
+    checkIsReady();
+  }, [actions]);
 
   // returns
-  if (files.length) {
+  if (actions.length) {
     return (
       <div className="space-y-6">
-        {files.map((file) => (
-          <div key={file.name} className="w-full cursor-pointer rounded-xl border h-20 px-10 flex items-center justify-between">
+        {actions.map((action: Action, i: any) => (
+          <div
+            key={i}
+            className="w-full cursor-pointer rounded-xl border h-20 px-10 flex items-center justify-between"
+          >
             <div className="flex gap-4 items-center">
               <span className="text-2xl text-orange-600">
-                {fileToIcon(file.type)}
+                {fileToIcon(action.file_type)}
               </span>
               <div className="flex items-center gap-1 w-96">
-                <span className="text-md font-medium">
-                  {compressFileName(file.name)}
+                <span className="text-md font-medium overflow-x-hidden">
+                  {compressFileName(action.file_name)}
                 </span>
                 <span className="text-gray-400 text-sm">
-                  ({bytesToSize(file.size)})
+                  ({bytesToSize(action.file_size)})
                 </span>
               </div>
             </div>
 
             <div className="text-gray-400 text-md flex items-center gap-4">
               <span>Convert to</span>
-              <Select>
+              <Select
+                onValueChange={(value) => updateAction(action.file_name, value)}
+              >
                 <SelectTrigger className="w-32 text-center text-gray-600 bg-gray-50 text-md font-medium">
                   <SelectValue placeholder="..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="light">PNG</SelectItem>
-                  <SelectItem value="dark">MP4</SelectItem>
-                  <SelectItem value="system">MP3</SelectItem>
+                  <SelectItem value="png">PNG</SelectItem>
+                  <SelectItem value="mp4">MP4</SelectItem>
+                  <SelectItem value="mp3">MP3</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <span
-              onClick={() => setFiles(files.filter((elt) => elt !== file))}
+              onClick={() => deleteAction(action)}
               className="cursor-pointer text-2xl text-gray-400"
             >
               <MdClose />
@@ -96,6 +145,7 @@ export default function Dropzone() {
             size="lg"
             disabled={!ready}
             className="rounded-xl font-semibold py-4 text-md"
+            onClick={convert}
           >
             Convert Now
           </Button>
@@ -110,6 +160,15 @@ export default function Dropzone() {
       onDragEnter={handleHover}
       onDragLeave={handleExitHover}
       accept={accepted_files}
+      maxFiles={10}
+      maxSize={200000000}
+      onDropRejected={() =>
+        toast({
+          variant: 'destructive',
+          title: 'Error uploading your file(s)',
+          description: 'Max Files allowed is 10, max size allowed is 1Gb',
+        })
+      }
     >
       {({ getRootProps, getInputProps }) => (
         <div

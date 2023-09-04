@@ -1,6 +1,8 @@
 export type Action = {
-  file_name: String,
-  file_size: Number,
-  from: String,
-  to: String | null
-}
+  buffer?: Buffer;
+  file_name: String;
+  file_size: number;
+  from: String;
+  to: String | null;
+  file_type?: String;
+};
