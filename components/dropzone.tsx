@@ -4,7 +4,7 @@
 import { FiUploadCloud } from 'react-icons/fi';
 import { LuFileSymlink } from 'react-icons/lu';
 import { MdClose } from 'react-icons/md';
-import ReactDropzone, { useDropzone } from 'react-dropzone';
+import ReactDropzone from 'react-dropzone';
 import bytesToSize from '@/utils/bytes-to-size';
 import fileToIcon from '@/utils/file-to-icon';
 import { useState } from 'react';
@@ -17,16 +17,33 @@ import {
   SelectValue,
 } from './ui/select';
 import { Button } from './ui/button';
+import type { Action } from '@/types';
 
 export default function Dropzone() {
   // variables & hooks
-  const [is_hover, setIsHover] = useState<Boolean>(false);
-  const [files, setFiles] = useState<File[]>([]);
+  const [is_hover, setIsHover] = useState<Boolean>(false)
+  const [files, setFiles] = useState<File[]>([])
+  const [actions, setActions] = useState<Action[]>([])
+  const [ready, setReady] = useState<Boolean>(false)
+  const accepted_files = {
+    'image/*': [],
+    'audio/*': [],
+    'video/*': [],
+  }
 
   // functions
   const handleUpload = (data: any): void => {
-    setFiles(data);
-    console.log(data);
+    setFiles(data)
+    const tmp: Action[] = []
+    data.forEach((file: any) => {
+      tmp.push({
+        file_name: file.name,
+        file_size: file.size,
+        from: file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2),
+        to: null
+      })
+    })
+    setActions(tmp)  
   };
 
   const handleHover = (): void => setIsHover(true);
@@ -37,7 +54,7 @@ export default function Dropzone() {
     return (
       <div className="space-y-6">
         {files.map((file) => (
-          <div className="w-full cursor-pointer rounded-xl border h-20 px-10 flex items-center justify-between">
+          <div key={file.name} className="w-full cursor-pointer rounded-xl border h-20 px-10 flex items-center justify-between">
             <div className="flex gap-4 items-center">
               <span className="text-2xl text-orange-600">
                 {fileToIcon(file.type)}
@@ -77,7 +94,7 @@ export default function Dropzone() {
         <div className="flex w-full justify-end">
           <Button
             size="lg"
-            disabled
+            disabled={!ready}
             className="rounded-xl font-semibold py-4 text-md"
           >
             Convert Now
@@ -92,6 +109,7 @@ export default function Dropzone() {
       onDrop={handleUpload}
       onDragEnter={handleHover}
       onDragLeave={handleExitHover}
+      accept={accepted_files}
     >
       {({ getRootProps, getInputProps }) => (
         <div

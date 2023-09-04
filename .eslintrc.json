@@ -8,5 +8,6 @@
     "project": "./tsconfig.json"
   },
   "rules": {
+    "semi": 0
   }
 }
