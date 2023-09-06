@@ -16,6 +16,8 @@ import { ImSpinner3 } from 'react-icons/im';
 import { MdDone } from 'react-icons/md';
 import { Badge } from '@/components/ui/badge';
 import { HiOutlineDownload } from 'react-icons/hi';
+import { BiError } from 'react-icons/bi';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -29,9 +31,39 @@ import type { Action } from '@/types';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 
 const extensions = {
-  image: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'ico', 'jfif'],
-  video: ['mp4', 'avi', 'mkv', 'mov', 'wmv'],
-  audio: ['mp3', 'wav', 'ogg', 'aac', 'wma', 'flac'],
+  image: [
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'bmp',
+    'webp',
+    'ico',
+    'tif',
+    'tiff',
+    'svg',
+    'raw',
+    'tga',
+  ],
+  video: [
+    'mp4',
+    'm4v',
+    'mp4v',
+    '3gp',
+    '3g2',
+    'avi',
+    'mov',
+    'wmv',
+    'mkv',
+    'flv',
+    'ogv',
+    'webm',
+    'h264',
+    '264',
+    'hevc',
+    '265',
+  ],
+  audio: ['mp3', 'wav', 'ogg', 'aac', 'wma', 'flac', 'm4a'],
 };
 
 export default function Dropzone() {
@@ -46,15 +78,34 @@ export default function Dropzone() {
   const [is_done, setIsDone] = useState<boolean>(false);
   const ffmpegRef = useRef<any>(null);
   const accepted_files = {
-    'image/*': [],
+    'image/*': [
+      '.jpg',
+      '.jpeg',
+      '.png',
+      '.gif',
+      '.bmp',
+      '.webp',
+      '.ico',
+      '.tif',
+      '.tiff',
+      '.raw',
+      '.tga',
+    ],
     'audio/*': [],
     'video/*': [],
   };
 
   // functions
+  const reset = () => {
+    setIsDone(false);
+    setActions([]);
+    setFiles([]);
+    setIsReady(false);
+    setIsConverting(false);
+  };
   const downloadAll = (): void => {
     for (let action of actions) {
-      download(action);
+      !action.is_error && download(action);
     }
   };
   const download = (action: Action) => {
@@ -78,25 +129,39 @@ export default function Dropzone() {
     setActions(tmp_actions);
     setIsConverting(true);
     for (let action of tmp_actions) {
-      const { file, to } = action;
-      const { url, output } = await convertFile(ffmpegRef.current, action);
-      tmp_actions = tmp_actions.map((elt) =>
-        elt === action
-          ? {
-              ...elt,
-              is_converted: true,
-              is_converting: false,
-              url,
-              output,
-            }
-          : elt,
-      );
-      setActions(tmp_actions);
+      try {
+        const { url, output } = await convertFile(ffmpegRef.current, action);
+        tmp_actions = tmp_actions.map((elt) =>
+          elt === action
+            ? {
+                ...elt,
+                is_converted: true,
+                is_converting: false,
+                url,
+                output,
+              }
+            : elt,
+        );
+        setActions(tmp_actions);
+      } catch (err) {
+        tmp_actions = tmp_actions.map((elt) =>
+          elt === action
+            ? {
+                ...elt,
+                is_converted: false,
+                is_converting: false,
+                is_error: true,
+              }
+            : elt,
+        );
+        setActions(tmp_actions);
+      }
     }
     setIsDone(true);
     setIsConverting(false);
   };
   const handleUpload = (data: Array<any>): void => {
+    handleExitHover();
     setFiles(data);
     const tmp: Action[] = [];
     data.forEach((file: any) => {
@@ -110,6 +175,7 @@ export default function Dropzone() {
         file,
         is_converted: false,
         is_converting: false,
+        is_error: false,
       });
     });
     setActions(tmp);
@@ -143,7 +209,12 @@ export default function Dropzone() {
     setFiles(files.filter((elt) => elt.name !== action.file_name));
   };
   useEffect(() => {
-    checkIsReady();
+    if (!actions.length) {
+      setIsDone(false);
+      setFiles([]);
+      setIsReady(false);
+      setIsConverting(false);
+    } else checkIsReady();
   }, [actions]);
   useEffect(() => {
     load();
@@ -161,7 +232,7 @@ export default function Dropzone() {
         {actions.map((action: Action, i: any) => (
           <div
             key={i}
-            className="w-full relative cursor-pointer rounded-xl border h-20 px-10 flex items-center justify-between"
+            className="w-full py-4 space-y-2 lg:py-0 relative cursor-pointer rounded-xl border h-fit lg:h-20 px-4 lg:px-10 flex flex-wrap lg:flex-nowrap items-center justify-between"
           >
             {!is_loaded && (
               <Skeleton className="h-full w-full -ml-10 cursor-progress absolute rounded-xl" />
@@ -180,7 +251,12 @@ export default function Dropzone() {
               </div>
             </div>
 
-            {action.is_converted ? (
+            {action.is_error ? (
+              <Badge variant="destructive" className="flex gap-2">
+                <span>Error Converting File</span>
+                <BiError />
+              </Badge>
+            ) : action.is_converted ? (
               <Badge variant="default" className="flex gap-2 bg-green-500">
                 <span>Done</span>
                 <MdDone />
@@ -203,19 +279,63 @@ export default function Dropzone() {
                   <SelectTrigger className="w-32 outline-none focus:outline-none focus:ring-0 text-center text-gray-600 bg-gray-50 text-md font-medium">
                     <SelectValue placeholder="..." />
                   </SelectTrigger>
-                  <SelectContent>
-                    {action.file_type.includes('image') &&
-                      extensions.image.map((elt) => (
-                        <SelectItem value={elt}>{elt}</SelectItem>
-                      ))}
-                    {action.file_type.includes('video') &&
-                      extensions.video.map((elt) => (
-                        <SelectItem value={elt}>{elt}</SelectItem>
-                      ))}
-                    {action.file_type.includes('audio') &&
-                      extensions.audio.map((elt) => (
-                        <SelectItem value={elt}>{elt}</SelectItem>
-                      ))}
+                  <SelectContent className="h-fit">
+                    {action.file_type.includes('image') && (
+                      <div className="grid grid-cols-2 gap-2 w-fit">
+                        {extensions.image.map((elt, i) => (
+                          <div key={i} className="col-span-1 text-center">
+                            <SelectItem value={elt} className="mx-auto">
+                              {elt}
+                            </SelectItem>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {action.file_type.includes('video') && (
+                      <Tabs defaultValue="video" className="w-full">
+                        <TabsList className="w-full">
+                          <TabsTrigger value="video" className="w-full">
+                            Video
+                          </TabsTrigger>
+                          <TabsTrigger value="audio" className="w-full">
+                            Audio
+                          </TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="video">
+                          <div className="grid grid-cols-3 gap-2 w-fit">
+                            {extensions.video.map((elt, i) => (
+                              <div key={i} className="col-span-1 text-center">
+                                <SelectItem value={elt} className="mx-auto">
+                                  {elt}
+                                </SelectItem>
+                              </div>
+                            ))}
+                          </div>
+                        </TabsContent>
+                        <TabsContent value="audio">
+                          <div className="grid grid-cols-3 gap-2 w-fit">
+                            {extensions.audio.map((elt, i) => (
+                              <div key={i} className="col-span-1 text-center">
+                                <SelectItem value={elt} className="mx-auto">
+                                  {elt}
+                                </SelectItem>
+                              </div>
+                            ))}
+                          </div>
+                        </TabsContent>
+                      </Tabs>
+                    )}
+                    {action.file_type.includes('audio') && (
+                      <div className="grid grid-cols-2 gap-2 w-fit">
+                        {extensions.audio.map((elt, i) => (
+                          <div key={i} className="col-span-1 text-center">
+                            <SelectItem value={elt} className="mx-auto">
+                              {elt}
+                            </SelectItem>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -237,14 +357,24 @@ export default function Dropzone() {
         ))}
         <div className="flex w-full justify-end">
           {is_done ? (
-            <Button
-              size="lg"
-              className="rounded-xl font-semibold relative py-4 text-md flex gap-2 items-center w-fit"
-              onClick={downloadAll}
-            >
-              {actions.length > 1 ? 'Download All' : 'Download'}
-              <HiOutlineDownload />
-            </Button>
+            <div className="space-y-4 w-fit">
+              <Button
+                size="lg"
+                className="rounded-xl font-semibold relative py-4 text-md flex gap-2 items-center w-full"
+                onClick={downloadAll}
+              >
+                {actions.length > 1 ? 'Download All' : 'Download'}
+                <HiOutlineDownload />
+              </Button>
+              <Button
+                size="lg"
+                onClick={reset}
+                variant="outline"
+                className="rounded-xl"
+              >
+                Convert Another File(s)
+              </Button>
+            </div>
           ) : (
             <Button
               size="lg"
@@ -278,6 +408,16 @@ export default function Dropzone() {
           variant: 'destructive',
           title: 'Error uploading your file(s)',
           description: 'Allowed Files: Audio, Video and Images.',
+          duration: 5000,
+        });
+      }}
+      onError={() => {
+        handleExitHover();
+        toast({
+          variant: 'destructive',
+          title: 'Error uploading your file(s)',
+          description: 'Allowed Files: Audio, Video and Images.',
+          duration: 5000,
         });
       }}
     >

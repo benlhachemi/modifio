@@ -28,7 +28,37 @@ export default async function convert(
   const input = getFileExtension(file_name);
   const output = removeFileExtension(file_name) + '.' + to;
   ffmpeg.writeFile(input, await fetchFile(file));
-  await ffmpeg.exec(['-i', input, output]);
+
+  // FFMEG COMMANDS
+  let ffmpeg_cmd: any = [];
+  // 3gp video
+  if (to === '3gp')
+    ffmpeg_cmd = [
+      '-i',
+      input,
+      '-r',
+      '20',
+      '-s',
+      '352x288',
+      '-vb',
+      '400k',
+      '-acodec',
+      'aac',
+      '-strict',
+      'experimental',
+      '-ac',
+      '1',
+      '-ar',
+      '8000',
+      '-ab',
+      '24k',
+      output,
+    ];
+  else ffmpeg_cmd = ['-i', input, output];
+
+  // execute cmd
+  await ffmpeg.exec(ffmpeg_cmd);
+
   const data = (await ffmpeg.readFile(output)) as any;
   const blob = new Blob([data], { type: file_type.split('/')[0] });
   const url = URL.createObjectURL(blob);
