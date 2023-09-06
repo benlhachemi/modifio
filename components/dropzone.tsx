@@ -10,7 +10,12 @@ import fileToIcon from '@/utils/file-to-icon';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import compressFileName from '@/utils/compress-file-name';
-import axios from 'axios';
+import { Skeleton } from '@/components/ui/skeleton';
+import convertImg from '@/utils/convert-img';
+import { ImSpinner3 } from 'react-icons/im';
+import { MdDone } from 'react-icons/md';
+import { Badge } from '@/components/ui/badge';
+import { HiOutlineDownload } from 'react-icons/hi';
 import {
   Select,
   SelectContent,
@@ -19,31 +24,53 @@ import {
   SelectValue,
 } from './ui/select';
 import { Button } from './ui/button';
+import loadFfmpeg from '@/utils/load-ffmpeg';
 import type { Action } from '@/types';
+
+const extensions = {
+  image: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'ico', 'jfif'],
+  video: ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv'],
+  audio: ['mp3', 'wav', 'ogg', 'aac', 'wma', 'flac'],
+};
 
 export default function Dropzone() {
   // variables & hooks
   const { toast } = useToast();
-  const [is_hover, setIsHover] = useState<Boolean>(false);
+  const [is_hover, setIsHover] = useState<boolean>(false);
   const [actions, setActions] = useState<Action[]>([]);
-  const [ready, setIsReady] = useState<Boolean>(false);
+  const [is_ready, setIsReady] = useState<boolean>(false);
   const [files, setFiles] = useState<Array<any>>([]);
+  const [is_loaded, setIsLoaded] = useState<boolean>(false);
+  const [is_converting, setIsConverting] = useState<boolean>(false);
+  const [is_done, setIsDone] = useState<boolean>(false);
   const accepted_files = {
     'image/*': [],
   };
 
   // functions
   const convert = async (): Promise<any> => {
-    axios({
-      method: 'POST',
-      url: '/api/convert',
-      data: {
-        actions,
-      },
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    let tmp_actions = actions.map((elt) => ({
+      ...elt,
+      is_converting: true,
+    }));
+    setActions(tmp_actions);
+    setIsConverting(true);
+    for (let action of tmp_actions) {
+      const { file, to } = action;
+      await convertImg(file, to);
+      tmp_actions = tmp_actions.map((elt) =>
+        elt === action
+          ? {
+              ...elt,
+              is_converted: true,
+              is_converting: false,
+            }
+          : elt,
+      );
+      setActions(tmp_actions);
+    }
+    setIsDone(true);
+    setIsConverting(false);
   };
   const handleUpload = (data: Array<any>): void => {
     setFiles(data);
@@ -56,7 +83,9 @@ export default function Dropzone() {
         from: file.name.slice(((file.name.lastIndexOf('.') - 1) >>> 0) + 2),
         to: null,
         file_type: file.type,
-        buffer: file,
+        file,
+        is_converted: false,
+        is_converting: false,
       });
     });
     setActions(tmp);
@@ -92,6 +121,9 @@ export default function Dropzone() {
   useEffect(() => {
     checkIsReady();
   }, [actions]);
+  useEffect(() => {
+    loadFfmpeg().then(() => setIsLoaded(true));
+  }, []);
 
   // returns
   if (actions.length) {
@@ -100,8 +132,11 @@ export default function Dropzone() {
         {actions.map((action: Action, i: any) => (
           <div
             key={i}
-            className="w-full cursor-pointer rounded-xl border h-20 px-10 flex items-center justify-between"
+            className="w-full relative cursor-pointer rounded-xl border h-20 px-10 flex items-center justify-between"
           >
+            {!is_loaded && (
+              <Skeleton className="h-full w-full -ml-10 cursor-progress absolute rounded-xl" />
+            )}
             <div className="flex gap-4 items-center">
               <span className="text-2xl text-orange-600">
                 {fileToIcon(action.file_type)}
@@ -116,39 +151,77 @@ export default function Dropzone() {
               </div>
             </div>
 
-            <div className="text-gray-400 text-md flex items-center gap-4">
-              <span>Convert to</span>
-              <Select
-                onValueChange={(value) => updateAction(action.file_name, value)}
-              >
-                <SelectTrigger className="w-32 text-center text-gray-600 bg-gray-50 text-md font-medium">
-                  <SelectValue placeholder="..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="png">PNG</SelectItem>
-                  <SelectItem value="mp4">MP4</SelectItem>
-                  <SelectItem value="mp3">MP3</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {action.is_converted ? (
+              <Badge variant="default" className="flex gap-2 bg-green-500">
+                <span>Done</span>
+                <MdDone />
+              </Badge>
+            ) : action.is_converting ? (
+              <Badge variant="default" className="flex gap-2">
+                <span>Converting</span>
+                <span className="animate-spin">
+                  <ImSpinner3 />
+                </span>
+              </Badge>
+            ) : (
+              <div className="text-gray-400 text-md flex items-center gap-4">
+                <span>Convert to</span>
+                <Select
+                  onValueChange={(value) =>
+                    updateAction(action.file_name, value)
+                  }
+                >
+                  <SelectTrigger className="w-32 outline-none focus:outline-none focus:ring-0 text-center text-gray-600 bg-gray-50 text-md font-medium">
+                    <SelectValue placeholder="..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {extensions.image.map((elt) => (
+                      <SelectItem value={elt}>{elt}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-            <span
-              onClick={() => deleteAction(action)}
-              className="cursor-pointer text-2xl text-gray-400"
-            >
-              <MdClose />
-            </span>
+            {action.is_converted ? (
+              <Button variant="outline">Download</Button>
+            ) : (
+              <span
+                onClick={() => deleteAction(action)}
+                className="cursor-pointer hover:bg-gray-50 rounded-full h-10 w-10 flex items-center justify-center text-2xl text-gray-400"
+              >
+                <MdClose />
+              </span>
+            )}
           </div>
         ))}
         <div className="flex w-full justify-end">
-          <Button
-            size="lg"
-            disabled={!ready}
-            className="rounded-xl font-semibold py-4 text-md"
-            onClick={convert}
-          >
-            Convert Now
-          </Button>
+          {is_done ? (
+            <Button
+              size="lg"
+              disabled={!is_ready || is_converting}
+              className="rounded-xl font-semibold relative py-4 text-md flex gap-2 items-center w-fit"
+              onClick={convert}
+            >
+              {actions.length > 1 ? 'Download All' : 'Download'}
+              <HiOutlineDownload />
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              disabled={!is_ready || is_converting}
+              className="rounded-xl font-semibold relative py-4 text-md flex items-center w-44"
+              onClick={convert}
+            >
+              {is_converting ? (
+                <span className="animate-spin text-lg">
+                  <ImSpinner3 />
+                </span>
+              ) : (
+                <span>Convert Now</span>
+              )}
+            </Button>
+          )}
         </div>
       </div>
     );
