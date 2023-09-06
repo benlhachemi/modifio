@@ -7,7 +7,7 @@ import { MdClose } from 'react-icons/md';
 import ReactDropzone from 'react-dropzone';
 import bytesToSize from '@/utils/bytes-to-size';
 import fileToIcon from '@/utils/file-to-icon';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import compressFileName from '@/utils/compress-file-name';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -26,6 +26,7 @@ import {
 import { Button } from './ui/button';
 import loadFfmpeg from '@/utils/load-ffmpeg';
 import type { Action } from '@/types';
+import { FFmpeg } from '@ffmpeg/ffmpeg';
 
 const extensions = {
   image: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'ico', 'jfif'],
@@ -43,11 +44,30 @@ export default function Dropzone() {
   const [is_loaded, setIsLoaded] = useState<boolean>(false);
   const [is_converting, setIsConverting] = useState<boolean>(false);
   const [is_done, setIsDone] = useState<boolean>(false);
+  const ffmpegRef = useRef<any>(null);
   const accepted_files = {
     'image/*': [],
   };
 
   // functions
+  const downloadAll = (): void => {
+    for (let action of actions) {
+      download(action);
+    }
+  };
+  const download = (action: Action) => {
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = action.url;
+    a.download = action.output;
+
+    document.body.appendChild(a);
+    a.click();
+
+    // Clean up after download
+    URL.revokeObjectURL(action.url);
+    document.body.removeChild(a);
+  };
   const convert = async (): Promise<any> => {
     let tmp_actions = actions.map((elt) => ({
       ...elt,
@@ -57,13 +77,15 @@ export default function Dropzone() {
     setIsConverting(true);
     for (let action of tmp_actions) {
       const { file, to } = action;
-      await convertImg(file, to);
+      const { url, output } = await convertImg(ffmpegRef.current, file, to);
       tmp_actions = tmp_actions.map((elt) =>
         elt === action
           ? {
               ...elt,
               is_converted: true,
               is_converting: false,
+              url,
+              output,
             }
           : elt,
       );
@@ -122,8 +144,13 @@ export default function Dropzone() {
     checkIsReady();
   }, [actions]);
   useEffect(() => {
-    loadFfmpeg().then(() => setIsLoaded(true));
+    load();
   }, []);
+  const load = async () => {
+    const ffmpeg_response: FFmpeg = await loadFfmpeg();
+    ffmpegRef.current = ffmpeg_response;
+    setIsLoaded(true);
+  };
 
   // returns
   if (actions.length) {
@@ -184,7 +211,9 @@ export default function Dropzone() {
             )}
 
             {action.is_converted ? (
-              <Button variant="outline">Download</Button>
+              <Button variant="outline" onClick={() => download(action)}>
+                Download
+              </Button>
             ) : (
               <span
                 onClick={() => deleteAction(action)}
@@ -199,9 +228,8 @@ export default function Dropzone() {
           {is_done ? (
             <Button
               size="lg"
-              disabled={!is_ready || is_converting}
               className="rounded-xl font-semibold relative py-4 text-md flex gap-2 items-center w-fit"
-              onClick={convert}
+              onClick={downloadAll}
             >
               {actions.length > 1 ? 'Download All' : 'Download'}
               <HiOutlineDownload />

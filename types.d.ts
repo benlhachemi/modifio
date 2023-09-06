@@ -7,4 +7,6 @@ export type Action = {
   file_type?: String;
   is_converting?: boolean;
   is_converted?: boolean;
+  url?: any;
+  output?: any;
 };
