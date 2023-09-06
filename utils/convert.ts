@@ -1,4 +1,5 @@
 // imports
+import { Action } from '@/types';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
 
@@ -19,17 +20,17 @@ function removeFileExtension(file_name: string) {
   return file_name; // No file extension found
 }
 
-export default async function convertImg(
+export default async function convert(
   ffmpeg: FFmpeg,
-  image_file: any,
-  to: any,
+  action: Action,
 ): Promise<any> {
-  const input = getFileExtension(image_file.name);
-  const output = removeFileExtension(image_file.name) + '.' + to;
-  ffmpeg.writeFile(input, await fetchFile(image_file));
+  const { file, to, file_name, file_type } = action;
+  const input = getFileExtension(file_name);
+  const output = removeFileExtension(file_name) + '.' + to;
+  ffmpeg.writeFile(input, await fetchFile(file));
   await ffmpeg.exec(['-i', input, output]);
   const data = (await ffmpeg.readFile(output)) as any;
-  const blob = new Blob([data], { type: 'image' });
+  const blob = new Blob([data], { type: file_type.split('/')[0] });
   const url = URL.createObjectURL(blob);
   return { url, output };
 }

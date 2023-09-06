@@ -1,10 +1,10 @@
 export type Action = {
-  file: Buffer;
-  file_name: String;
+  file: any;
+  file_name: string;
   file_size: number;
-  from: String;
+  from: string;
   to: String | null;
-  file_type?: String;
+  file_type: string;
   is_converting?: boolean;
   is_converted?: boolean;
   url?: any;

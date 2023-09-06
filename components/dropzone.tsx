@@ -11,7 +11,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import compressFileName from '@/utils/compress-file-name';
 import { Skeleton } from '@/components/ui/skeleton';
-import convertImg from '@/utils/convert-img';
+import convertFile from '@/utils/convert';
 import { ImSpinner3 } from 'react-icons/im';
 import { MdDone } from 'react-icons/md';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +30,7 @@ import { FFmpeg } from '@ffmpeg/ffmpeg';
 
 const extensions = {
   image: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'ico', 'jfif'],
-  video: ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv'],
+  video: ['mp4', 'avi', 'mkv', 'mov', 'wmv'],
   audio: ['mp3', 'wav', 'ogg', 'aac', 'wma', 'flac'],
 };
 
@@ -47,6 +47,8 @@ export default function Dropzone() {
   const ffmpegRef = useRef<any>(null);
   const accepted_files = {
     'image/*': [],
+    'audio/*': [],
+    'video/*': [],
   };
 
   // functions
@@ -77,7 +79,7 @@ export default function Dropzone() {
     setIsConverting(true);
     for (let action of tmp_actions) {
       const { file, to } = action;
-      const { url, output } = await convertImg(ffmpegRef.current, file, to);
+      const { url, output } = await convertFile(ffmpegRef.current, action);
       tmp_actions = tmp_actions.map((elt) =>
         elt === action
           ? {
@@ -202,9 +204,18 @@ export default function Dropzone() {
                     <SelectValue placeholder="..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {extensions.image.map((elt) => (
-                      <SelectItem value={elt}>{elt}</SelectItem>
-                    ))}
+                    {action.file_type.includes('image') &&
+                      extensions.image.map((elt) => (
+                        <SelectItem value={elt}>{elt}</SelectItem>
+                      ))}
+                    {action.file_type.includes('video') &&
+                      extensions.video.map((elt) => (
+                        <SelectItem value={elt}>{elt}</SelectItem>
+                      ))}
+                    {action.file_type.includes('audio') &&
+                      extensions.audio.map((elt) => (
+                        <SelectItem value={elt}>{elt}</SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -261,15 +272,14 @@ export default function Dropzone() {
       onDragEnter={handleHover}
       onDragLeave={handleExitHover}
       accept={accepted_files}
-      maxFiles={10}
-      maxSize={200000000}
-      onDropRejected={() =>
+      onDropRejected={() => {
+        handleExitHover();
         toast({
           variant: 'destructive',
           title: 'Error uploading your file(s)',
-          description: 'Max Files allowed is 10, max size allowed is 1Gb',
-        })
-      }
+          description: 'Allowed Files: Audio, Video and Images.',
+        });
+      }}
     >
       {({ getRootProps, getInputProps }) => (
         <div

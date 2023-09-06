@@ -1,6 +1,7 @@
 // imports
 import Image from 'next/image';
 import { Button } from './ui/button';
+import Link from 'next/link';
 
 export default function Navbar({}): any {
   return (
@@ -15,7 +16,7 @@ export default function Navbar({}): any {
 
       <div className="gap-1 md:gap-2 lg:gap-4 hidden md:flex">
         <Button variant="ghost" className="font-semibold text-md">
-          Home
+          <Link href="/">Home</Link>
         </Button>
         <Button variant="ghost" className="font-semibold text-md">
           API
