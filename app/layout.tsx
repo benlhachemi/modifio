@@ -26,6 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <GA GA_MEASUREMENT_ID='G-52GQ441X7H' />
+      <meta name="google-site-verification" content="V8lmEvFOdYBlChgR6pYABBZBhI1EFnPb1YuxTTdHXMU" />
       <body className={inter.className}>
         <Navbar />
         <Toaster />
