@@ -1,5 +1,8 @@
 // imports
 import Dropzone from '@/components/dropzone';
+import ReactGA from "react-ga4"
+
+ReactGA.send({ hitType: "pageview", page: "/", title: "Home" })
 
 export default function Home() {
   return (
