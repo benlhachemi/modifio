@@ -3,9 +3,8 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import Navbar from '@/components/navbar';
 import { Toaster } from '@/components/ui/toaster';
-import ReactGA from "react-ga4"
+import GA from '@/components/GA';
 
-ReactGA.initialize("52GQ441X7H")
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
@@ -26,6 +25,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <GA GA_MEASUREMENT_ID='G-52GQ441X7H' />
       <body className={inter.className}>
         <Navbar />
         <Toaster />
