@@ -247,7 +247,7 @@ export default function Dropzone() {
                 <span className="text-md font-medium overflow-x-hidden">
                   {compressFileName(action.file_name)}
                 </span>
-                <span className="text-gray-400 text-sm">
+                <span className="text-muted-foreground text-sm">
                   ({bytesToSize(action.file_size)})
                 </span>
               </div>
@@ -271,7 +271,7 @@ export default function Dropzone() {
                 </span>
               </Badge>
             ) : (
-              <div className="text-gray-400 text-md flex items-center gap-4">
+              <div className="text-muted-foreground text-md flex items-center gap-4">
                 <span>Convert to</span>
                 <Select
                   onValueChange={(value) => {
@@ -285,7 +285,7 @@ export default function Dropzone() {
                   }}
                   value={selcted}
                 >
-                  <SelectTrigger className="w-32 outline-none focus:outline-none focus:ring-0 text-center text-gray-600 bg-gray-50 text-md font-medium">
+                  <SelectTrigger className="w-32 outline-none focus:outline-none focus:ring-0 text-center text-muted-foreground bg-background text-md font-medium">
                     <SelectValue placeholder="..." />
                   </SelectTrigger>
                   <SelectContent className="h-fit">
@@ -357,7 +357,7 @@ export default function Dropzone() {
             ) : (
               <span
                 onClick={() => deleteAction(action)}
-                className="cursor-pointer hover:bg-gray-50 rounded-full h-10 w-10 flex items-center justify-center text-2xl text-gray-400"
+                className="cursor-pointer hover:bg-muted rounded-full h-10 w-10 flex items-center justify-center text-2xl text-foreground"
               >
                 <MdClose />
               </span>
@@ -433,10 +433,10 @@ export default function Dropzone() {
       {({ getRootProps, getInputProps }) => (
         <div
           {...getRootProps()}
-          className=" bg-gray-50 h-72 lg:h-80 xl:h-96 rounded-3xl shadow-sm border-2 border-dashed cursor-pointer flex items-center justify-center"
+          className=" bg-background h-72 lg:h-80 xl:h-96 rounded-3xl shadow-sm border-secondary border-2 border-dashed cursor-pointer flex items-center justify-center"
         >
           <input {...getInputProps()} />
-          <div className="space-y-4 text-gray-500">
+          <div className="space-y-4 text-foreground">
             {is_hover ? (
               <>
                 <div className="justify-center flex text-6xl">
