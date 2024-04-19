@@ -7,13 +7,13 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { ModeToggle } from "./mode-toggle";
 import { LuMenu } from "react-icons/lu";
 
-export default function Navbar({}): any {
+export default function Navbar({ }): any {
     return (
-        <nav className="w-full backdrop-blur-md bg-background bg-opacity-30 z-50 fixed h-24 flex justify-between items-center py-10 px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-24">
+        <nav className="fixed z-50 flex items-center justify-between w-full h-24 px-4 py-10 backdrop-blur-md bg-background bg-opacity-30 md:px-8 lg:px-12 xl:px-16 2xl:px-24">
             <Link href="/">
-                <Image alt="logo" className="cursor-pointer w-40 dark:invert" src="/images/logo.svg" height={100} width={170} />
+                <Image alt="logo" className="w-40 cursor-pointer dark:invert" src="/images/logo.svg" height={100} width={170} />
             </Link>
-            <div className="gap-1 md:gap-2 lg:gap-4 hidden md:flex">
+            <div className="hidden gap-1 md:gap-2 lg:gap-4 md:flex">
                 <Button variant="ghost" className="font-semibold text-md">
                     <Link href="/">Home</Link>
                 </Button>
@@ -28,12 +28,12 @@ export default function Navbar({}): any {
                     </Button>
                 </Link>
             </div>
-            <div className="hidden md:flex items-center gap-2">
+            <div className="items-center hidden gap-2 md:flex">
                 <ModeToggle />
                 <Link href="https://github.com/benlhachemi/modifio.git">
                     <Button
                         variant="default"
-                        className="rounded-full w-fit bg-orange-600 gap-2 items-center hidden md:flex"
+                        className="items-center hidden gap-2 bg-orange-600 rounded-full w-fit md:flex"
                         size="lg"
                     >
                         <span>Github Repo</span>
@@ -45,7 +45,7 @@ export default function Navbar({}): any {
             </div>
             {/* MOBILE NAV */}
             <Sheet>
-                <SheetTrigger className="block md:hidden p-3">
+                <SheetTrigger className="block p-3 md:hidden">
                     <span className="text-2xl text-slate-950 dark:text-slate-200">
                         <LuMenu />
                     </span>
@@ -53,22 +53,28 @@ export default function Navbar({}): any {
                 <SheetContent>
                     <SheetHeader>
                         <SheetDescription>
-                            <div className="w-full space-y-3">
-                                <Link href="/">
-                                    <Button variant="link" className="font-semibold text-md w-full">
-                                        Home
-                                    </Button>
-                                </Link>
-                                <Link href="/about">
-                                    <Button variant="link" className="font-semibold text-md w-full">
-                                        About
-                                    </Button>
-                                </Link>
-                                <Link href="/privacy-policy">
-                                    <Button variant="link" className="font-semibold text-md w-full">
-                                        Privacy Policy
-                                    </Button>
-                                </Link>
+                            <div className="flex flex-col w-full h-full">
+                                <SheetTrigger asChild>
+                                    <Link href="/">
+                                        <Button variant="link" className="w-full font-semibold text-md">
+                                            Home
+                                        </Button>
+                                    </Link>
+                                </SheetTrigger>
+                                <SheetTrigger asChild>
+                                    <Link href="/about">
+                                        <Button variant="link" className="w-full font-semibold text-md">
+                                            About
+                                        </Button>
+                                    </Link>
+                                </SheetTrigger>
+                                <SheetTrigger asChild>
+                                    <Link href="/privacy-policy">
+                                        <Button variant="link" className="w-full font-semibold text-md">
+                                            Privacy Policy
+                                        </Button>
+                                    </Link>
+                                </SheetTrigger>
                                 <ModeToggle />
                             </div>
                         </SheetDescription>
