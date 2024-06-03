@@ -31,8 +31,12 @@ export default async function convert(
 
   // FFMEG COMMANDS
   let ffmpeg_cmd: any = [];
+
+  // Use codec copy for faster transcoding
+  ffmpeg_cmd = ['-i', input, '-codec', 'copy', output];
+
   // 3gp video
-  if (to === '3gp')
+  if (to === '3gp') {
     ffmpeg_cmd = [
       '-i',
       input,
@@ -54,7 +58,7 @@ export default async function convert(
       '24k',
       output,
     ];
-  else ffmpeg_cmd = ['-i', input, output];
+  }
 
   // execute cmd
   await ffmpeg.exec(ffmpeg_cmd);
